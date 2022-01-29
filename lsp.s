@@ -2425,7 +2425,9 @@ DSP_LSP_routine_interruption_Timer2:
 	movei		#%00001111000000000000000000000000,R2		; mask port 1
 	movei		#%00000000000000000000000000000011,R3		; mask port 1
 
-	moveq		#0,R8				; R8=resultat port 1
+	movei		#%11110000000000000000000000000000,R5		; mask port 2
+	movei		#%00000000000000000000000000001100,R6		; mask port 2
+
 
 
 ; row 0
@@ -2442,12 +2444,21 @@ DSP_LSP_routine_interruption_Timer2:
 	move		R1,R10				; stocke pour lecture port 2
 	
 	move		R1,R4
+	move		R10,R7
 	and			R3,R4		
-	shlq		#8,R4				; R4=Ap xxxx xxxx
+	and			R6,R7		
 	and			R2,R1				
+	and			R5,R10				
+	shlq		#8,R4				; R4=Ap xxxx xxxx
+	shlq		#6,R7				; R4=Ap xxxx xxxx
 	shrq		#24,R1				; R1=RLDU
+	shrq		#28,R10				; R10=RLDU
 	or			R4,R1
+	or			R7,R10
 	move		R1,R8
+	move		R10,R9
+
+
 
 ; row 1
 	MOVEI		#$81BD,R1			; #($81 << 8)|(%1011 << 4)|(%1101),(a2) ; (B D) + (1 4 7 *)
@@ -2458,30 +2469,51 @@ DSP_LSP_routine_interruption_Timer2:
 ; 0000 1111 0000 0000 0000 0000 0000 0011
 ;      147*                            BD
 	move		R1,R10				; stocke pour lecture port 2
+;row1 port 1&2
+
 	move		R1,R4
+	move		R10,R7
 	and			R3,R4
+	and			R6,R7		
 	shlq		#20,R4
+	shlq		#18,R7				
 	and			R2,R1				
+	and			R5,R10				
 	shrq		#12,R1				; R1=147*
+	shrq		#16,R10				; R10=147*
 	or			R1,R4
+	or			R7,R10
 	or			R4,R8				; R8= BD xxxx 147* xxAp xxxx RLDU
+	or			R10,R9
+
 
 ; row 2
 	MOVEI		#$81DB,R1			; #($81 << 8)|(%1101 << 4)|(%1011),(a2) ; (C E) + (2 5 8 0)
 	storew		R1,(R0)				; lecture row 2
 	nop
 	load		(R0),R1
+	move		R1,R10				; stocke pour lecture port 2
+
 ; row2 = 
 ; 0000 1111 0000 0000 0000 0000 0000 0011
 ;      2580                            CE
-	move		R1,R10				; stocke pour lecture port 2
+; 24,8,22,12
 	move		R1,R4
-	and			R3,R4				;R4=xxxx xxCE
+	move		R10,R7
+	and			R3,R4
+	and			R6,R7		
 	shlq		#24,R4
+	shlq		#22,R7				
 	and			R2,R1				
-	shrq		#8,R1				; R1=2580
+	and			R5,R10				
+	shrq		#8,R1				; R1=147*
+	shrq		#12,R10				; R10=147*
 	or			R1,R4
-	or			R4,R8				; R8= xxCE xxBD 2580 147* xxAp xxxx RLDU
+	or			R7,R10
+	or			R4,R8				; R8= BD xxxx 147* xxAp xxxx RLDU
+	or			R10,R9
+
+
 
 ; row 3
 	MOVEI		#$81E7,R1			; #($81 << 8)|(%1110 << 4)|(%0111),(a2) ; (Option F) + (3 6 9 #)
@@ -2491,19 +2523,30 @@ DSP_LSP_routine_interruption_Timer2:
 ; row3 = 
 ; 0000 1111 0000 0000 0000 0000 0000 0011
 ;      369#                            oF
+; l10,r20,l8,r24
 	move		R1,R10				; stocke pour lecture port 2
+
 	move		R1,R4
-	and			R3,R4				;R4=xxxx xxoF
+	move		R10,R7
+	and			R3,R4
+	and			R6,R7		
 	shlq		#10,R4
+	shlq		#8,R7				
 	and			R2,R1				
-	shrq		#20,R1				; R1=2580
+	and			R5,R10				
+	shrq		#20,R1				; R1=147*
+	shrq		#24,R10				; R10=147*
 	or			R1,R4
-	or			R4,R8				; R8= xxCE xxBD 2580 147* xxAp xxxx RLDU
+	or			R7,R10
+	or			R4,R8				; R8= BD xxxx 147* xxAp xxxx RLDU
+	or			R10,R9
+
 	
 	
 	not			R8
-	nop
+	not			R9
 	store		R8,(R11)
+	store		R9,(R12)
 	
 	
 									
@@ -2608,7 +2651,7 @@ DSP_routine_init_DSP:
 	movei	#JPIT3,r10				; F10004
 	;movei	#JPIT4,r11				; F10006
 	movei	#145*65536,r12			; Timer 1 Pre-scaler
-	movei	#225-1,r13				; 800 HZ / 16 fois par VBL
+	movei	#955-1,r13				; 951=200hz
 	or		R13,R12
 	store	r12,(r10)				; JPIT1 & JPIT2
 
