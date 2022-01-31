@@ -12,8 +12,15 @@
 ; OK - lire 4 octets par 4 octets de sample / attention à l'alignement du sample, lire les premiers octets en loadb et/ou loadw !
 ; - optimiser lecture lsp etc dans Timer 1
 ; - ajouter 4 voies samples avec frequence
-; - gerer le joypad
+; OK - gerer le joypad : xxxxxxCx xxBx2580 147*oxAP 369#RLDU
 ; - stocker le resultat de chaque voie, ne recalculer que si increment a avancé de 1 entier
+; - interpolation entre samples, sur 8 octets stockés
+; -  mono/stereo playback
+; - master volume for mod/sfx
+; - "stop module"
+; - "shut down DSP"
+; - module - play once/loop 
+; - samples : play once/loop
 
 ; - Timer 1 pour gestion LSP
 ; - I2S pour replay samples
@@ -38,7 +45,7 @@ CLEAR_BSS			.equ			1									; 1=efface toute la BSS jusqu'a la fin de la ram ut
 LSP_DSP_Audio_frequence					.equ			46000				; real hardware needs lower sample frequencies than emulators 
 nb_bits_virgule_offset					.equ			11					; 11 ok DRAM/ 8 avec samples en ram DSP
 
-display_infos_debug				.equ			0
+display_infos_debug				.equ			1
 DSP_DEBUG						.equ			0
 I2S_during_Timer1				.equ			0									; 0= I2S waits while timer 1 / 1=IMASK cleared while Timer 1
 LSP_avancer_module				.equ			1								; 1=incremente position dans le module
@@ -147,6 +154,7 @@ boucle_copie_bloc_DSP:
 	lea		LSP_module_music_data,a0
 	lea		LSP_module_sound_bank,a1
 	jsr		LSP_PlayerInit
+	move.l	m_lspInstruments,a0
 
 ;		Out : 	a0: music BPM pointer (16bits).w
 ;				d0: music len in tick count
@@ -250,7 +258,8 @@ copie_couleurs:
 	lea			chaine_entete_debug_module,a0
 	bsr			print_string
 
-
+	lea			LSP_module_sound_bank,a0
+	move.l		a0,EDZTMP1
 
 toto:
 
@@ -288,6 +297,12 @@ toto:
 	bsr		print_caractere
 
 	move.l	LSP_DSP_PAULA_internal_location1,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
@@ -300,6 +315,12 @@ toto:
 	move.l	#' ',d0
 	bsr		print_caractere
 	move.l	LSP_DSP_PAULA_internal_length1,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 
 
@@ -308,6 +329,12 @@ toto:
 	bsr		print_caractere
 
 	move.l	LSP_DSP_PAULA_internal_location2,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
@@ -320,13 +347,18 @@ toto:
 	move.l	#' ',d0
 	bsr		print_caractere
 	move.l	LSP_DSP_PAULA_internal_length2,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 
 
 	; ligne suivant
 	moveq	#10,d0
 	bsr		print_caractere
-
 
 
 	move.l	LSP_DSP_PAULA_internal_location3,d0
@@ -366,6 +398,8 @@ toto:
 	moveq	#10,d0
 	bsr		print_caractere
 
+;-------------- deuxieme groupe d'infos
+
 
 	lea			chaine_entete_debug_module2,a0
 	bsr			print_string
@@ -373,54 +407,133 @@ toto:
 
 ; affiche les registres externes
 	move.l	LSP_DSP_PAULA_AUD0L,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
+
 	move.l	LSP_DSP_PAULA_AUD0LEN,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD0PER,d0
+
+	move.l	LSP_DSP_repeat_pointeur0,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD0VOL,d0
+
+	move.l	LSP_DSP_repeat_length0,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
+
 	; ligne suivant
 	moveq	#10,d0
 	bsr		print_caractere
 
 	move.l	LSP_DSP_PAULA_AUD1L,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
 	move.l	LSP_DSP_PAULA_AUD1LEN,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD1PER,d0
+	move.l	LSP_DSP_repeat_pointeur1,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD1VOL,d0
+
+	move.l	LSP_DSP_repeat_length1,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
+	
 	; ligne suivant
 	moveq	#10,d0
 	bsr		print_caractere
 
 	move.l	LSP_DSP_PAULA_AUD2L,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
 	move.l	LSP_DSP_PAULA_AUD2LEN,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD2PER,d0
+	move.l	LSP_DSP_repeat_pointeur2,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD2VOL,d0
+
+	move.l	LSP_DSP_repeat_length2,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
 	; ligne suivant
 	moveq	#10,d0
@@ -446,11 +559,24 @@ toto:
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD3PER,d0
+	move.l	LSP_DSP_repeat_pointeur3,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
-	move.l	LSP_DSP_PAULA_AUD3VOL,d0
+
+	move.l	LSP_DSP_repeat_length3,d0
+	.if		nb_bits_virgule_offset<9
+		lsr.l	#nb_bits_virgule_offset,d0
+	.else
+		lsr.l	#8,d0
+		lsr.l	#nb_bits_virgule_offset-8,d0
+	.endif	
 	bsr		print_nombre_hexa_8_chiffres
 	; ligne suivant
 	moveq	#10,d0
@@ -460,7 +586,7 @@ toto:
 	bsr		print_caractere
 
 
-	move.l	LSP_DSP_PAULA_AUD0DAT,d0
+	move.l	EDZTMP1,d0
 	bsr		print_nombre_hexa_8_chiffres
 	move.l	#' ',d0
 	bsr		print_caractere
@@ -1255,7 +1381,7 @@ LSP_PlayerInit:
 			move.l		d6,m_escCodeRewind-LSPVars(a3)		; tout en .L
 			move.w		(a0)+,d6
 			move.l		d6,m_escCodeSetBpm-LSPVars(a3)
-			move.l		(a0)+,-(a7)
+			move.l		(a0)+,-(a7)							; nb de ticks du module en tout = temps de replay ( /BPM)
 			;move.l	a2,m_dmaconPatch(a3)
 			;move.w	#$8000,-1(a2)			; Be sure DMACon word is $8000 (note: a2 should be ODD address)
 			moveq		#0,d0
@@ -1269,34 +1395,38 @@ LSP_PlayerInit:
 			;bset.b		#0,3(a0)				; bit0 is relocation done flag
 			;bne.s		.relocated
 			
-			move.l		(a0),d6					; pointeur sample
-			add.l		d1,d6					; passage de relatif en absolu
+			move.l		(a0),d5					; pointeur sample
+			add.l		d1,d5					; passage de relatif en absolu
 			;lsl.l		#nb_bits_virgule_offset,d6
-			move.l		d6,(a0)					; pointeur sample
+			move.l		d5,(a0)					; pointeur sample
 
 			
 			moveq		#0,d6
 			move.w		4(a0),d6				; taille en words
-			add.w		d6,d6
+			add.l		d6,d6
 			move.w		d6,4(a0)				; taille en bytes
 
 			move.l		(a0),a4					
-			bsr.s		LSP_unsigne_sample		; A4=sample location / d6=length
+			;bsr.s		LSP_unsigne_sample		; A4=sample location / d6=length
 
 
 			move.l		6(a0),d6					; pointeur sample repeat
 			add.l		d1,d6					; passage de relatif en absolu
+			cmp.l		d5,d6					; corrige pointeur de repeat avant le debut de l'instrument
+			bge.s		.ok_loop
+			move.l		d5,d6
+.ok_loop:
 			;lsl.l		#nb_bits_virgule_offset,d6
 			move.l		d6,6(a0)					; pointeur sample repeat
 			
 			moveq		#0,d6
 			move.w		10(a0),d6				; taille repeat en words
-			add.w		d6,d6
+			add.l		d6,d6
 			move.w		d6,10(a0)				; taille repeat en bytes
 
 .relocated:	
 			lea			12(a0),a0
-			dbf			d0,.relocLoop
+			dbf.w		d0,.relocLoop
 		
 			move.w		(a0)+,d0				; codes count (+2)
 			move.l		a0,m_codeTableAddr-LSPVars(a3)	; code table
@@ -1468,11 +1598,11 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word3:
 
 		sh			R25,R21								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
 		load		(R23),R23							; R23 = volume : 6 bits
-		shrq		#24,R21								; descends l'octet à lire
+		sharq		#24,R21								; descends l'octet à lire
 ; ch2
 		movei		#LSP_DSP_PAULA_internal_location2,R28						; adresse sample actuelle, a virgule
 
-		mult		R23,R21								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
+		imult		R23,R21								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
 ; R21=sample channel 3 on 14 bits
 
@@ -1531,11 +1661,11 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word2:
 
 		sh			R25,R20								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
 		load		(R23),R23							; R23 = volume : 6 bits
-		shrq		#24,R20								; descends l'octet à lire
+		sharq		#24,R20								; descends l'octet à lire
 ; ch1
 		movei		#LSP_DSP_PAULA_internal_location1,R28						; adresse sample actuelle, a virgule
 
-		mult		R23,R20								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
+		imult		R23,R20								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
 ; R20=sample channel 2 on 14 bits
 
@@ -1594,11 +1724,11 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word1:
 
 		sh			R25,R19								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
 		load		(R23),R23							; R23 = volume : 6 bits
-		shrq		#24,R19								; descends l'octet à lire
+		sharq		#24,R19								; descends l'octet à lire
 ; ch0
 		movei		#LSP_DSP_PAULA_internal_location0,R28						; adresse sample actuelle, a virgule
 
-		mult		R23,R19								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
+		imult		R23,R19								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
 ; R19=sample channel 1 on 14 bits
 
@@ -1666,12 +1796,12 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 
 		sh			R25,R18								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
 		load		(R23),R23							; R23 = volume : 6 bits
-		shrq		#24,R18								; descends l'octet à lire
+		sharq		#24,R18								; descends l'octet à lire
 
 ; suite
 		movei		#$8000,R26
 
-		mult		R23,R18								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
+		imult		R23,R18								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
 ; R20=sample channel 2 on 14 bits
 
@@ -1698,9 +1828,9 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 		shlq		#1,R18				; 16 bits unsigned
 		shlq		#1,R19
 		
-		sub			R26,R18				; 16 bits signed
+		;sub			R26,R18				; 16 bits signed
 		movei		#L_I2S+4,R25
-		sub			R26,R19
+		;sub			R26,R19
 		store		R19,(R27)			; write right channel
 		store		R18,(R25)			; write left channel
 
@@ -1908,13 +2038,9 @@ DSP_LSP_Timer1_noPa:
 DSP_LSP_Timer1_setIns3:
 	loadw		(R0),R3				; offset de l'instrument par rapport au precedent
 ; addition en .w
-	btst		#15,R3
-	jr			eq,.positif3
-	nop
-	movei		#$FFFF0000,R7
-	or			R7,R3
-
-.positif3:
+; passage en .L
+	shlq		#16,R3
+	sharq		#16,R3
 	add			R3,R5				;R5=pointeur datas instruments
 	addq		#2,R0
 
@@ -2000,13 +2126,9 @@ DSP_LSP_Timer1_skip3:
 DSP_LSP_Timer1_setIns2:
 	loadw		(R0),R3				; offset de l'instrument par rapport au precedent
 ; addition en .w
-	btst		#15,R3
-	jr			eq,.positif2
-	nop
-	movei		#$FFFF0000,R7
-	or			R7,R3
-
-.positif2:
+; passage en .L
+	shlq		#16,R3
+	sharq		#16,R3
 	add			R3,R5				;R5=pointeur datas instruments
 	addq		#2,R0
 
@@ -2092,13 +2214,9 @@ DSP_LSP_Timer1_skip2:
 DSP_LSP_Timer1_setIns1:
 	loadw		(R0),R3				; offset de l'instrument par rapport au precedent
 ; addition en .w
-	btst		#15,R3
-	jr			eq,.positif1
-	nop
-	movei		#$FFFF0000,R7
-	or			R7,R3
-
-.positif1:
+; passage en .L
+	shlq		#16,R3
+	sharq		#16,R3
 	add			R3,R5				;R5=pointeur datas instruments
 	addq		#2,R0
 
@@ -2184,13 +2302,9 @@ DSP_LSP_Timer1_skip1:
 DSP_LSP_Timer1_setIns0:
 	loadw		(R0),R3				; offset de l'instrument par rapport au precedent
 ; addition en .w
-	btst		#15,R3
-	jr			eq,.positif0
-	nop
-	movei		#$FFFF0000,R7
-	or			R7,R3
-
-.positif0:
+; passage en .L
+	shlq		#16,R3
+	sharq		#16,R3
 	add			R3,R5				;R5=pointeur datas instruments
 	addq		#2,R0
 
@@ -2238,6 +2352,7 @@ DSP_LSP_Timer1_setIns0:
 	movei		#LSP_DSP_PAULA_internal_length0,R8
 	store		R6,(R7)				; stocke le pointeur sample dans LSP_DSP_PAULA_internal_location3
 	store		R9,(R8)				; stocke la nouvelle taille en 16:16: dans LSP_DSP_PAULA_internal_length3
+
 ; remplace les 4 octets en stock
 	move		R6,R12
 	shrq		#nb_bits_virgule_offset+2,R12	; enleve la virgule  + 2 bits du bas
@@ -2350,6 +2465,9 @@ DSP_LSP_Timer1_noInst:
 
 ;--------------------------------------------------
 
+
+
+
 	
 ;------------------------------------	
 ; return from interrupt Timer 1
@@ -2395,14 +2513,17 @@ DSP_LSP_Timer1_r_chgbpm:
 	movei	#182150,R10				; 26593900 / 146 = 182150
 	div		R9,R10
 	or		R10,R10
-	move	R10,R13
-	subq	#1,R13					; -1 pour parametrage du timer 1
+	move	R10,R14
+	subq	#1,R14					; -1 pour parametrage du timer 1
 ; 26593900 / 50 = 531 878 => 2 × 73 × 3643 => 146*3643
 	movei	#JPIT1,r10				; F10000
 	movei	#145*65536,r9				; Timer 1 Pre-scaler
 	;shlq	#16,r12
-	or		R13,R9
+	or		R14,R9
 	store	r9,(r10)				; JPIT1 & JPIT2
+
+
+
 	jump		(R12)
 	addq		#1,R0
 
@@ -2660,6 +2781,7 @@ DSP_routine_init_DSP:
 	movei	#D_FLAGS,r28
 	
 	movei	#D_I2SENA|D_TIM1ENA|D_TIM2ENA|REGPAGE,r29			; I2S+Timer 1+timer 2
+	;movei	#D_I2SENA|D_TIM1ENA|REGPAGE,r29			; I2S+Timer 1
 	;movei	#D_I2SENA|REGPAGE,r29					; I2S only
 	
 	
@@ -2675,6 +2797,8 @@ DSP_boucle_centrale:
 	
 	
 	.phrase
+
+EDZTMP1:											dc.l			$120771
 
 DSP_frequence_de_replay_reelle_I2S:					dc.l			0
 DSP_UN_sur_frequence_de_replay_reelle_I2S:			dc.l			0
@@ -2804,6 +2928,7 @@ U235SE_BUT_2			EQU		$80000	; 2
 U235SE_BUT_B			EQU		$200000	; B button
 U235SE_BUT_C			EQU		$2000000; C button
 
+; xxxxxxCx xxBx2580 147*oxAP 369#RLDU
 DSP_pad1:				dc.l		0
 DSP_pad2:				dc.l		0
 
@@ -2874,23 +2999,24 @@ chaine_BPM_init_LSP:			dc.b	" bpm.",0
 chaine_Hz_init_LSP:				dc.b	" Hz.",10,0
 chaine_replay_frequency:		dc.b	"Replay frequency : ",0
 chaine_RAM_DSP:					dc.b	"DSP RAM available while running : ",0
-chaine_entete_debug_module:		dc.b	"location incremen offset   length  ",10,0
-chaine_entete_debug_module2:	dc.b	"location length   period   volume",10,0
+chaine_entete_debug_module:		dc.b	"location incremen offset   end  ",10,0
+chaine_entete_debug_module2:	dc.b	"location length   repeat_s rep end",10,0
 		even
 
 	.phrase
 LSP_module_music_data:
-	;.incbin			"LSP/elysium.lsmusic"
+	.incbin			"LSP/elysium.lsmusic"
 	;.incbin			"LSP/d.lsmusic"
-	.incbin			"LSP/k.lsmusic"
+	;.incbin			"LSP/k.lsmusic"
 	;.incbin			"LSP/testsamples4v.lsmusic"
+	
 	.phrase
 LSP_module_sound_bank:
-	;.incbin			"LSP/elysium.lsbank"
+	.incbin			"LSP/elysium.lsbank"
 	;.incbin			"LSP/d.lsbank"
-	.incbin			"LSP/k.lsbank"
+	;.incbin			"LSP/k.lsbank"
 	;.incbin			"LSP/testsamples4v.lsbank"
-
+	
 	.phrase
 
 	.bss
