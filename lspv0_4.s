@@ -42,7 +42,7 @@
 
 
 CLEAR_BSS			.equ			1									; 1=efface toute la BSS jusqu'a la fin de la ram utilisée
-LSP_DSP_Audio_frequence					.equ			52000				; real hardware needs lower sample frequencies than emulators 
+LSP_DSP_Audio_frequence					.equ			46000				; real hardware needs lower sample frequencies than emulators 
 nb_bits_virgule_offset					.equ			11					; 11 ok DRAM/ 8 avec samples en ram DSP
 
 display_infos_debug				.equ			1
@@ -1510,8 +1510,8 @@ DSP_base_memoire:
 ; DSP : routines en interruption
 ; -------------------------------
 ; utilisés : 	R29/R30/R31
-; 				R18/R19/R20/R21/R22/R23/R24/R25/R26/R27/R28
-;				
+; 				R18/R19/R20/R21 /R22/R23/R24/R25/R26/R27/R28
+;				+ R15
 
 
 ; I2S : replay sample
@@ -1526,27 +1526,20 @@ DSP_LSP_routine_interruption_I2S:
 	storew	r26,(r27)
 	.endif
 
-; version complexe avec stockage de 4 octets
+		;movei		#LSP_PAULA,R15
 
-; ----------
+
+; version complexe avec stockage de 4 octets
 ; channel 3
-;	movei		#LSP_DSP_PAULA_internal_location3,R1
-;	movei		#LSP_DSP_PAULA_internal_increment3,R2
-;	movei		#LSP_DSP_PAULA_internal_length3,R3
-;	movei		#LSP_DSP_PAULA_AUD3LEN,R4
-;	movei		#LSP_DSP_PAULA_AUD3L,R5
-		;movei		#LSP_DSP_PAULA_internal_location3,R28						; adresse sample actuelle, a virgule
-		movefa		R1,R28
-		;movei		#LSP_DSP_PAULA_internal_increment3,R27
-		movefa		R2,R27
+		movei		#LSP_DSP_PAULA_internal_location3,R28						; adresse sample actuelle, a virgule
+		movei		#LSP_DSP_PAULA_internal_increment3,R27
 		load		(R28),R26										; R26=current pointeur sample 16:16
 		load		(R27),R27										; R27=increment 16:16
 		move		R26,R17											; R17 = pointeur sample a virgule avant increment
-		;movei		#LSP_DSP_PAULA_internal_length3,R25				; =FIN
-		movefa		R3,R25
+		movei		#LSP_DSP_PAULA_internal_length3,R25				; =FIN
 		add			R27,R26											; R26=adresse+increment , a virgule
 		load		(R25),R23
-		movefa		R0,R22
+		movei		#$FFFFFFFC,R22
 		cmp			R23,R26
 		jr			mi,DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel3
 		;nop
@@ -1554,11 +1547,9 @@ DSP_LSP_routine_interruption_I2S:
 
 ; fin de sample => on recharge les infos des registres externes
 		shlq		#32-nb_bits_virgule_offset,R26
-		;movei		#LSP_DSP_PAULA_AUD3LEN,R27			; fin, a virgule 
-		movefa		R4,R27
+		movei		#LSP_DSP_PAULA_AUD3LEN,R27			; fin, a virgule 
 		shrq		#32-nb_bits_virgule_offset,R26		; on ne garde que la virgule
-		;movei		#LSP_DSP_PAULA_AUD3L,R24			; sample location a virgule
-		movefa		R5,R24
+		movei		#LSP_DSP_PAULA_AUD3L,R24			; sample location a virgule
 		load		(R27),R27
 		load		(R24),R23
 		store		R27,(R25)							; update internal sample end, a virgule
@@ -1567,17 +1558,17 @@ DSP_LSP_routine_interruption_I2S:
 DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel3:
 		store		R26,(R28)							; stocke internal sample pointeur, a virgule
 		shrq		#nb_bits_virgule_offset,R26								; nouveau pointeur adresse sample partie entiere
-														;shrq		#nb_bits_virgule_offset,R17								; ancien pointeur adresse sample partie entiere
+		;shrq		#nb_bits_virgule_offset,R17								; ancien pointeur adresse sample partie entiere
 		move		R26,R25								; R25 = nouveau pointeur sample 
 		and			R22,R17								; ancien pointeur sample modulo 4
 		and			R22,R26								; nouveau pointeur sample modulo 4
-		;movei		#LSP_DSP_PAULA_AUD3DAT,R28			; 4 octets actuels
-		subq		#4,R28								; de LSP_DSP_PAULA_internal_location3 => LSP_DSP_PAULA_AUD3DAT
+		movei		#LSP_DSP_PAULA_AUD3DAT,R28			; 4 octets actuels
 		not			R22									; => %11
 		load		(R28),R21							; R21 = octets actuels en stock
 		and			R22,R25								; R25 = position octet à lire
 		cmp			R17,R26
 		jr			eq,DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word3
+		;nop
 		shlq		#3,R25					; numero d'octet à lire * 8
 
 ; il faut rafraichir R21
@@ -1585,52 +1576,43 @@ DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel3:
 		store		R21,(R28)							; rafraichit le stockage des 4 octets
 
 DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word3:
-		;movei		#LSP_DSP_PAULA_AUD3VOL,R23/R24	
-		subq		#4,R28								; de LSP_DSP_PAULA_AUD3DAT => LSP_DSP_PAULA_AUD3VOL
+		movei		#LSP_DSP_PAULA_AUD3VOL,R23
 		neg			R25									; -0 -8 -16 -24
 ; R25=numero d'octet à lire
 ; ch2
-		;movei		#LSP_DSP_PAULA_internal_increment2,R27
-		movefa		R7,R27
+		movei		#LSP_DSP_PAULA_internal_increment2,R27
 
 		sh			R25,R21								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
-		load		(R28),R28							; R23 = volume : 6 bits
+		load		(R23),R23							; R23 = volume : 6 bits
 		sharq		#24,R21								; descends l'octet à lire
 ; ch2
-		imult		R28,R21								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
+		movei		#LSP_DSP_PAULA_internal_location2,R28						; adresse sample actuelle, a virgule
+
+		imult		R23,R21								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
 ; R21=sample channel 3 on 14 bits
 
 ; ----------
 ; channel 2
-;	movei		#LSP_DSP_PAULA_internal_location2,R6
-;	movei		#LSP_DSP_PAULA_internal_increment2,R7
-;	movei		#LSP_DSP_PAULA_internal_length2,R8
-;	movei		#LSP_DSP_PAULA_AUD2LEN,R9
-;	movei		#LSP_DSP_PAULA_AUD2L,R10
-		load		(R27),R27										; R27=increment 16:16
 		;movei		#LSP_DSP_PAULA_internal_location2,R28						; adresse sample actuelle, a virgule
-		movefa		R6,R28
-		;movei		#LSP_DSP_PAULA_internal_length2,R25				; =FIN
-		movefa		R8,R25
-
 		;movei		#LSP_DSP_PAULA_internal_increment2,R27
 		load		(R28),R26										; R26=current pointeur sample 16:16
+		load		(R27),R27										; R27=increment 16:16
 		move		R26,R17											; R17 = pointeur sample a virgule avant increment
+		movei		#LSP_DSP_PAULA_internal_length2,R25				; =FIN
 		add			R27,R26											; R26=adresse+increment , a virgule
 		load		(R25),R23
-		movefa		R0,R22
+		movei		#$FFFFFFFC,R22
 		cmp			R23,R26
 		jr			mi,DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel2
+		;nop
 		shrq		#nb_bits_virgule_offset,R17								; ancien pointeur adresse sample partie entiere
 
 ; fin de sample => on recharge les infos des registres externes
 		shlq		#32-nb_bits_virgule_offset,R26
-		;movei		#LSP_DSP_PAULA_AUD2LEN,R27			; fin, a virgule 
-		movefa		R9,R27
+		movei		#LSP_DSP_PAULA_AUD2LEN,R27			; fin, a virgule 
 		shrq		#32-nb_bits_virgule_offset,R26		; on ne garde que la virgule
-		;movei		#LSP_DSP_PAULA_AUD2L,R24			; sample location a virgule
-		movefa		R10,R24
+		movei		#LSP_DSP_PAULA_AUD2L,R24			; sample location a virgule
 		load		(R27),R27
 		load		(R24),R23
 		store		R27,(R25)							; update internal sample end, a virgule
@@ -1643,8 +1625,7 @@ DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel2:
 		move		R26,R25								; R25 = nouveau pointeur sample 
 		and			R22,R17								; ancien pointeur sample modulo 4
 		and			R22,R26								; nouveau pointeur sample modulo 4
-		;movei		#LSP_DSP_PAULA_AUD2DAT,R28			; 4 octets actuels
-		subq		#4,R28								; de LSP_DSP_PAULA_internal_location2 => LSP_DSP_PAULA_AUD2DAT
+		movei		#LSP_DSP_PAULA_AUD2DAT,R28			; 4 octets actuels
 		not			R22									; => %11
 		load		(R28),R20							; R20 = octets actuels en stock
 		and			R22,R25								; R25 = position octet à lire
@@ -1658,38 +1639,33 @@ DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel2:
 		store		R20,(R28)							; rafraichit le stockage des 4 octets
 
 DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word2:
-		;movei		#LSP_DSP_PAULA_AUD2VOL,R23
-		subq		#4,R28								; de LSP_DSP_PAULA_AUD2DAT => LSP_DSP_PAULA_AUD2VOL
+		movei		#LSP_DSP_PAULA_AUD2VOL,R23
 		neg			R25									; -0 -8 -16 -24
 ; R25=numero d'octet à lire
 ; ch1
-		;movei		#LSP_DSP_PAULA_internal_increment1,R27
-		movefa		R12,R27
+		movei		#LSP_DSP_PAULA_internal_increment1,R27
 
 		sh			R25,R20								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
-		load		(R28),R28							; R23 = volume : 6 bits
+		load		(R23),R23							; R23 = volume : 6 bits
 		sharq		#24,R20								; descends l'octet à lire
-		imult		R28,R20								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
+; ch1
+		movei		#LSP_DSP_PAULA_internal_location1,R28						; adresse sample actuelle, a virgule
+
+		imult		R23,R20								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
 ; R20=sample channel 2 on 14 bits
 
 ; ----------
 ; channel 1
-;	movei		#LSP_DSP_PAULA_internal_location1,R11
-;	movei		#LSP_DSP_PAULA_internal_increment1,R12
-;	movei		#LSP_DSP_PAULA_internal_length1,R13
-;	movei		#LSP_DSP_PAULA_AUD1LEN,R14
-;	movei		#LSP_DSP_PAULA_AUD1L,R15
 		;movei		#LSP_DSP_PAULA_internal_location1,R28						; adresse sample actuelle, a virgule
-		movefa		R11,R28
+		;movei		#LSP_DSP_PAULA_internal_increment1,R27
 		load		(R28),R26										; R26=current pointeur sample 16:16
 		load		(R27),R27										; R27=increment 16:16
 		move		R26,R17											; R17 = pointeur sample a virgule avant increment
-		;movei		#LSP_DSP_PAULA_internal_length1,R25				; =FIN
-		movefa		R13,R25
+		movei		#LSP_DSP_PAULA_internal_length1,R25				; =FIN
 		add			R27,R26											; R26=adresse+increment , a virgule
 		load		(R25),R23
-		movefa		R0,R22
+		movei		#$FFFFFFFC,R22
 		cmp			R23,R26
 		jr			mi,DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel1
 		;nop
@@ -1697,11 +1673,9 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word2:
 
 ; fin de sample => on recharge les infos des registres externes
 		shlq		#32-nb_bits_virgule_offset,R26
-		;movei		#LSP_DSP_PAULA_AUD1LEN,R27			; fin, a virgule 
-		movefa		R14,R27
+		movei		#LSP_DSP_PAULA_AUD1LEN,R27			; fin, a virgule 
 		shrq		#32-nb_bits_virgule_offset,R26		; on ne garde que la virgule
-		;movei		#LSP_DSP_PAULA_AUD1L,R24			; sample location a virgule
-		movefa		R15,R24
+		movei		#LSP_DSP_PAULA_AUD1L,R24			; sample location a virgule
 		load		(R27),R27
 		load		(R24),R23
 		store		R27,(R25)							; update internal sample end, a virgule
@@ -1714,8 +1688,7 @@ DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel1:
 		move		R26,R25								; R25 = nouveau pointeur sample 
 		and			R22,R17								; ancien pointeur sample modulo 4
 		and			R22,R26								; nouveau pointeur sample modulo 4
-		;movei		#LSP_DSP_PAULA_AUD1DAT,R28			; 4 octets actuels
-		subq		#4,R28								; de LSP_DSP_PAULA_internal_location1 => LSP_DSP_PAULA_AUD1DAT
+		movei		#LSP_DSP_PAULA_AUD1DAT,R28			; 4 octets actuels
 		not			R22									; => %11
 		load		(R28),R19							; R19 = octets actuels en stock
 		and			R22,R25								; R25 = position octet à lire
@@ -1729,20 +1702,17 @@ DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel1:
 		store		R19,(R28)							; rafraichit le stockage des 4 octets
 
 DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word1:
-		;movei		#LSP_DSP_PAULA_AUD1VOL,R23
-		subq		#4,R28								; de LSP_DSP_PAULA_AUD1DAT => LSP_DSP_PAULA_AUD1VOL
+		movei		#LSP_DSP_PAULA_AUD1VOL,R23
 		neg			R25									; -0 -8 -16 -24
 ; R25=numero d'octet à lire
 ; ch0
-		;movei		#LSP_DSP_PAULA_internal_increment0,R27
-		movefa		R17,R27
+		movei		#LSP_DSP_PAULA_internal_increment0,R27
 
 		sh			R25,R19								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
-		load		(R28),R23							; R23 = volume : 6 bits
+		load		(R23),R23							; R23 = volume : 6 bits
 		sharq		#24,R19								; descends l'octet à lire
 ; ch0
-		;movei		#LSP_DSP_PAULA_internal_location0,R28						; adresse sample actuelle, a virgule
-		movefa		R16,R28
+		movei		#LSP_DSP_PAULA_internal_location0,R28						; adresse sample actuelle, a virgule
 
 		imult		R23,R19								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
@@ -1750,30 +1720,26 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word1:
 
 ; ----------
 ; channel 0
-;	movei		#LSP_DSP_PAULA_internal_location0,R16
-;	movei		#LSP_DSP_PAULA_internal_increment0,R17
-;	movei		#LSP_DSP_PAULA_internal_length0,R18
-;	movei		#LSP_DSP_PAULA_AUD0LEN,R19
-;	movei		#LSP_DSP_PAULA_AUD0L,R20
+
+		;movei		#LSP_DSP_PAULA_internal_location0,R28						; adresse sample actuelle, a virgule
+		;movei		#LSP_DSP_PAULA_internal_increment0,R27
 		load		(R28),R26										; R26=current pointeur sample 16:16
 		load		(R27),R27										; R27=increment 16:16
 		move		R26,R17											; R17 = pointeur sample a virgule avant increment
-		;movei		#LSP_DSP_PAULA_internal_length0,R25				; =FIN
-		movefa		R18,R25
+		movei		#LSP_DSP_PAULA_internal_length0,R25				; =FIN
 		add			R27,R26											; R26=adresse+increment , a virgule
 		load		(R25),R23
-		movefa		R0,R22											; -FFFFFFC
+		movei		#$FFFFFFFC,R22
 		cmp			R23,R26
 		jr			mi,DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel0
+		;nop
 		shrq		#nb_bits_virgule_offset,R17								; ancien pointeur adresse sample partie entiere
 
 ; fin de sample => on recharge les infos des registres externes
 		shlq		#32-nb_bits_virgule_offset,R26
-		;movei		#LSP_DSP_PAULA_AUD0LEN,R27			; fin, a virgule 
-		movefa		R19,R27
+		movei		#LSP_DSP_PAULA_AUD0LEN,R27			; fin, a virgule 
 		shrq		#32-nb_bits_virgule_offset,R26		; on ne garde que la virgule
-		;movei		#LSP_DSP_PAULA_AUD0L,R24			; sample location a virgule
-		movefa		R20,R24
+		movei		#LSP_DSP_PAULA_AUD0L,R24			; sample location a virgule
 		load		(R27),R27
 		load		(R24),R23
 		store		R27,(R25)							; update internal sample end, a virgule
@@ -1782,16 +1748,17 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word1:
 DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel0:
 		store		R26,(R28)							; stocke internal sample pointeur, a virgule
 		shrq		#nb_bits_virgule_offset,R26								; nouveau pointeur adresse sample partie entiere
+		;shrq		#nb_bits_virgule_offset,R17								; ancien pointeur adresse sample partie entiere
 		move		R26,R25								; R25 = nouveau pointeur sample 
 		and			R22,R17								; ancien pointeur sample modulo 4
 		and			R22,R26								; nouveau pointeur sample modulo 4
-		;movei		#LSP_DSP_PAULA_AUD0DAT,R28			; 4 octets actuels
-		subq		#4,R28								; de LSP_DSP_PAULA_internal_location0 => LSP_DSP_PAULA_AUD0DAT
+		movei		#LSP_DSP_PAULA_AUD0DAT,R28			; 4 octets actuels
 		not			R22									; => %11
 		load		(R28),R18							; R18 = octets actuels en stock
 		and			R22,R25								; R25 = position octet à lire
 		cmp			R17,R26
 		jr			eq,DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0
+		;nop
 		shlq		#3,R25					; numero d'octet à lire * 8
 
 ; il faut rafraichir R18
@@ -1799,8 +1766,7 @@ DSP_LSP_routine_interruption_I2S_pas_fin_de_sample_channel0:
 		store		R18,(R28)							; rafraichit le stockage des 4 octets
 
 DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
-		;movei		#LSP_DSP_PAULA_AUD0VOL,R23			
-		subq		#4,R28								; de LSP_DSP_PAULA_AUD0DAT => LSP_DSP_PAULA_AUD0VOL
+		movei		#LSP_DSP_PAULA_AUD0VOL,R23
 		neg			R25									; -0 -8 -16 -24
 ; R25=numero d'octet à lire
 
@@ -1816,16 +1782,15 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 ;--
 
 		sh			R25,R18								; shift les 4 octets en stock vers la gauche, pour positionner l'octet à lire en haut
-		load		(R28),R23							; R23 = volume : 6 bits
+		load		(R23),R23							; R23 = volume : 6 bits
 		sharq		#24,R18								; descends l'octet à lire
 
 ; suite
-		;movei		#$8000,R26
-		movei		#L_I2S,R27
+		movei		#$8000,R26
 
 		imult		R23,R18								; unsigned multiplication : unsigned sample * volume => 8bits + 6 bits = 14 bits
 
-; R18=sample channel 0 on 14 bits
+; R20=sample channel 2 on 14 bits
 
 
 
@@ -1844,13 +1809,14 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 		.endif
 
 		;movei		#$8000,R26
-		movei		#L_I2S+4,R25
 		add			R21,R18				; R18 = left 15 bits unsigned
+		movei		#L_I2S,R27
 		;add			R20,R19				; R19 = right 15 bits unsigned
-		shlq		#1,R19
 		shlq		#1,R18				; 16 bits unsigned
+		shlq		#1,R19
 		
 		;sub			R26,R18				; 16 bits signed
+		movei		#L_I2S+4,R25
 		;sub			R26,R19
 		store		R19,(R27)			; write right channel
 		store		R18,(R25)			; write left channel
@@ -1887,7 +1853,7 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 ; 
 ; registres utilisés :
 ;		R13/R16   /R31
-;		R0/R1/R2/R3/R4/R5/R6/R7/R8/R9/R10  R12/R13/R14/R16
+;		R0/R1/R2/R3/R4/R5/R6/R7/R8/R9  R12/R14
 
 
 DSP_LSP_routine_interruption_Timer1:
@@ -2799,7 +2765,7 @@ DSP_routine_init_DSP:
 
 
 ; enable interrupts
-	movei	#D_FLAGS,r30
+	movei	#D_FLAGS,r28
 	
 	movei	#D_I2SENA|D_TIM1ENA|D_TIM2ENA|REGPAGE,r29			; I2S+Timer 1+timer 2
 	;movei	#D_I2SENA|D_TIM1ENA|REGPAGE,r29			; I2S+Timer 1
@@ -2809,39 +2775,11 @@ DSP_routine_init_DSP:
 	;movei	#D_TIM1ENA|REGPAGE,r29					; Timer 1 only
 	;movei	#D_TIM2ENA|REGPAGE,r29					; Timer 2 only
 
-;----------------------------
-; variables pour movfa
-	movei		#$FFFFFFFC,R0									; OK
-; channel 3
-	movei		#LSP_DSP_PAULA_internal_location3,R1			; OK
-	movei		#LSP_DSP_PAULA_internal_increment3,R2			; OK
-	movei		#LSP_DSP_PAULA_internal_length3,R3				; OK
-	movei		#LSP_DSP_PAULA_AUD3LEN,R4						; OK
-	movei		#LSP_DSP_PAULA_AUD3L,R5
-;channel 2
-	movei		#LSP_DSP_PAULA_internal_location2,R6			; OK
-	movei		#LSP_DSP_PAULA_internal_increment2,R7			; OK
-	movei		#LSP_DSP_PAULA_internal_length2,R8				; OK
-	movei		#LSP_DSP_PAULA_AUD2LEN,R9						; OK
-	movei		#LSP_DSP_PAULA_AUD2L,R10						; OK
-;channel 1
-	movei		#LSP_DSP_PAULA_internal_location1,R11
-	movei		#LSP_DSP_PAULA_internal_increment1,R12
-	movei		#LSP_DSP_PAULA_internal_length1,R13
-	movei		#LSP_DSP_PAULA_AUD1LEN,R14
-	movei		#LSP_DSP_PAULA_AUD1L,R15
-;channel 0
-	movei		#LSP_DSP_PAULA_internal_location0,R16
-	movei		#LSP_DSP_PAULA_internal_increment0,R17
-	movei		#LSP_DSP_PAULA_internal_length0,R18
-	movei		#LSP_DSP_PAULA_AUD0LEN,R19
-	movei		#LSP_DSP_PAULA_AUD0L,R20
-;---------------
-	store	r29,(r30)
+	store	r29,(r28)
 
 DSP_boucle_centrale:
-	movei	#DSP_boucle_centrale,R30
-	jump	(R30)
+	movei	#DSP_boucle_centrale,R20
+	jump	(R20)
 	nop
 	
 	
@@ -2889,16 +2827,16 @@ LSP_DSP_PAULA_internal_length2:		dc.l			(silence+4)<<nb_bits_virgule_offset			; 
 LSP_DSP_repeat_pointeur2:			dc.l			silence<<nb_bits_virgule_offset
 LSP_DSP_repeat_length2:				dc.l			(silence+4)<<nb_bits_virgule_offset
 ; channel 3
-LSP_DSP_PAULA_AUD3L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location																0
-LSP_DSP_PAULA_AUD3LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !																		+4
-LSP_DSP_PAULA_AUD3PER:				dc.l			0				; period , a transformer en increment																			+8
-LSP_DSP_PAULA_AUD3VOL:				dc.l			0				; volume																										+12
-LSP_DSP_PAULA_AUD3DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering															+16
-LSP_DSP_PAULA_internal_location3:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played						+20
-LSP_DSP_PAULA_internal_increment3:	dc.l			0				; internal register : increment linked to period 16:16															+24
-LSP_DSP_PAULA_internal_length3:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played							+28
-LSP_DSP_repeat_pointeur3:			dc.l			silence<<nb_bits_virgule_offset																		;							+32
-LSP_DSP_repeat_length3:				dc.l			(silence+4)<<nb_bits_virgule_offset																	;							+36
+LSP_DSP_PAULA_AUD3L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
+LSP_DSP_PAULA_AUD3LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
+LSP_DSP_PAULA_AUD3PER:				dc.l			0				; period , a transformer en increment
+LSP_DSP_PAULA_AUD3VOL:				dc.l			0				; volume
+LSP_DSP_PAULA_AUD3DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
+LSP_DSP_PAULA_internal_location3:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
+LSP_DSP_PAULA_internal_increment3:	dc.l			0				; internal register : increment linked to period 16:16
+LSP_DSP_PAULA_internal_length3:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
+LSP_DSP_repeat_pointeur3:			dc.l			silence<<nb_bits_virgule_offset
+LSP_DSP_repeat_length3:				dc.l			(silence+4)<<nb_bits_virgule_offset
 
 offset_LSP_DSP_PAULA_internal_location0		.equ			((LSP_DSP_PAULA_internal_location0-LSP_PAULA)/4)
 
@@ -3056,15 +2994,15 @@ chaine_entete_debug_module2:	dc.b	"location length   repeat_s rep end",10,0
 
 	.phrase
 LSP_module_music_data:
-	;.incbin			"LSP/elysium.lsmusic"
-	.incbin			"LSP/d.lsmusic"
+	.incbin			"LSP/elysium.lsmusic"
+	;.incbin			"LSP/d.lsmusic"
 	;.incbin			"LSP/k.lsmusic"
 	;.incbin			"LSP/testsamples4v.lsmusic"
 	
 	.phrase
 LSP_module_sound_bank:
-	;.incbin			"LSP/elysium.lsbank"
-	.incbin			"LSP/d.lsbank"
+	.incbin			"LSP/elysium.lsbank"
+	;.incbin			"LSP/d.lsbank"
 	;.incbin			"LSP/k.lsbank"
 	;.incbin			"LSP/testsamples4v.lsbank"
 	
