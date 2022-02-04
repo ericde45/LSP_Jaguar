@@ -13,12 +13,12 @@
 ; - optimiser lecture lsp etc dans Timer 1
 ; - ajouter 4 voies samples avec frequence
 ; OK - gerer le joypad : xxxxxxCx xxBx2580 147*oxAP 369#RLDU
-; - stocker le resultat de chaque voie, ne recalculer que si increment a avancé de 1 entier
+; // - stocker le resultat de chaque voie, ne recalculer que si increment a avancé de 1 entier
 ; - interpolation entre samples, sur 8 octets stockés
 ; -  mono/stereo playback
 ; - master volume for mod/sfx
 ; - "stop module"
-; - "shut down DSP"
+; OK - "shut down DSP"
 ; - module - play once/loop 
 ; - samples : play once/loop
 
@@ -2840,14 +2840,53 @@ DSP_routine_init_DSP:
 	store	r29,(r30)
 
 DSP_boucle_centrale:
-	movei	#DSP_boucle_centrale,R30
-	jump	(R30)
+; test button A
+	movei	#DSP_pad1,R30
+	load	(R30),R30
+	btst	#9,R30
+	jr		eq,DSP_no_A_pressed
+	nop
+	movei	#LSP_DSP_flag,R29
+	load	(R29),R30
+	not		R30
+	store	R30,(R29)
+
+DSP_no_A_pressed:
+	movei	#LSP_DSP_oldflag,R27
+	load	(R27),R28
+	movei	#LSP_DSP_flag,R29
+	load	(R29),R30
+
+	cmp		R28,R30
+	movei	#DSP_boucle_centrale,R29
+	jump	eq,(R29)
+	nop
+; flags are different, handles new flag
+	movei	#DSP_boucle_centrale,R28
+	cmpq	#0,R30
+	jr		ne,DSP_switch_ON
+	store	R30,(R27)
+; DSP switch off
+	movei	#D_FLAGS,r30
+	movei	#D_TIM2ENA|REGPAGE,r27
+	store	R27,(R30)							; just timer 2
+	jump	(R28)
+	nop
+DSP_switch_ON:
+	movei	#D_I2SENA|D_TIM1ENA|D_TIM2ENA|REGPAGE,r27			; I2S+Timer 1+timer 2
+	movei	#D_FLAGS,r30
+	store	R27,(R30)
+	jump	(R28)
+
 	nop
 	
 	
 	.phrase
 
 EDZTMP1:											dc.l			$120771
+
+LSP_DSP_flag:										dc.l			0				; DSP replay flag 0=OFF / 1=ON
+LSP_DSP_oldflag:									dc.l			0
 
 DSP_frequence_de_replay_reelle_I2S:					dc.l			0
 DSP_UN_sur_frequence_de_replay_reelle_I2S:			dc.l			0
