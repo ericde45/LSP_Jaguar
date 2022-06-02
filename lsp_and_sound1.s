@@ -134,21 +134,6 @@ boucle_clean_BSS3:
 	bne.s		boucle_clean_BSS3
 	.endif
 
-;check ntsc ou pal:
-
-	moveq		#0,d0
-	move.w		JOYBUTS ,d0
-
-	move.l		#26593900,frequence_Video_Clock			; PAL
-	move.l		#415530,frequence_Video_Clock_divisee
-
-	
-	btst		#4,d0
-	beq.s		jesuisenpal
-jesuisenntsc:
-	move.l		#26590906,frequence_Video_Clock			; NTSC
-	move.l		#415483,frequence_Video_Clock_divisee
-jesuisenpal:
 
 
 	move.l	#0,D_CTRL
@@ -2939,27 +2924,37 @@ DSP_routine_init_DSP:
 
 ; calculs des frequences deplacé dans DSP
 ; sclk I2S
-	movei	#LSP_DSP_Audio_frequence,R0
-	movei	#frequence_Video_Clock_divisee,R1
-	load	(R1),R1
-	shlq	#8,R1
-	div		R0,R1
-	movei	#128,R2
-	add		R2,R1			; +128 = +0.5
-	shrq	#8,R1
-	subq	#1,R1
-	movei	#DSP_parametre_de_frequence_I2S,r2
-	store	R1,(R2)
+	movei	#$00F14003,r0
+	loadb	(r0),r3
+	btst	#4,r3
+	movei	#415530<<8,r1	;frequence_Video_Clock_divisee*128
+	jr		eq,initPAL
+	nop
+	movei	#415483<<8,r1	;frequence_Video_Clock_divisee*128
+initPAL:
+    movei    #LSP_DSP_Audio_frequence,R0
+    div      R0,R1
+    movei    #128,R2
+    add      R2,R1		; +128 = +0.5
+    shrq     #8,R1
+    subq     #1,R1
+    movei    #DSP_parametre_de_frequence_I2S,r2
+    store    R1,(R2)
 ;calcul inverse
-	addq	#1,R1
-	add		R1,R1			; *2
-	add		R1,R1			; *2
-	shlq	#4,R1			; *16
-	movei	#frequence_Video_Clock,R0
-	load	(R0),R0
-	div		R1,R0
-	movei	#DSP_frequence_de_replay_reelle_I2S,R2
-	store	R0,(R2)
+    addq    #1,R1
+    add     R1,R1		; *2
+    add     R1,R1		; *2
+    shlq    #4,R1	; *16
+
+	btst	#4,r3
+	movei	#26593900,r0	;frequence_Video_Clock
+	jr		eq,initPAL2
+	nop
+	movei	#26590906,r0	;frequence_Video_Clock
+initPAL2:
+    div      R1,R0
+    movei    #DSP_frequence_de_replay_reelle_I2S,R2
+    store    R0,(R2)
 	
 
 ; init I2S
@@ -3589,8 +3584,6 @@ DEBUT_BSS:
 ;EDZ_compteur_reset_offset_entier_voie_A:			ds.l	1
 
 	.phrase
-frequence_Video_Clock:					ds.l				1
-frequence_Video_Clock_divisee :			ds.l				1
 
 
 
