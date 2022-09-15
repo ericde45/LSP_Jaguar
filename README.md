@@ -7,7 +7,7 @@ modules need to be be converted using lspconvert.exe
 
 current LSP version handled by this code : 1.05
 
-- lsp2.s : latest module only version
+- lspv1_5.s : latest module only version
 - lsp_and_sound1.s : the same + 4 sound channels
 
 compile and link : 
