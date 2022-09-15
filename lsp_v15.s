@@ -76,7 +76,7 @@
 
 
 CLEAR_BSS			.equ			1									; 1=efface toute la BSS jusqu'a la fin de la ram utilisée
-LSP_DSP_Audio_frequence					.equ			51000				; real hardware needs lower sample frequencies than emulators 
+LSP_DSP_Audio_frequence					.equ			50000				; real hardware needs lower sample frequencies than emulators 
 nb_bits_virgule_offset					.equ			11					; 11 ok DRAM/ 8 avec samples en ram DSP
 
 display_infos_debug				.equ			0
@@ -3003,7 +3003,7 @@ initPAL2:
 
 ;---------------
 ; volumes : R21/R22/R23/R24
-; dispos : R25/R26 =  registres
+; dispos : R25/R26 
 
 
 
@@ -3068,51 +3068,51 @@ DSP_parametre_de_frequence_I2S:						dc.l			0
 LSP_PAULA:
 ; variables Paula
 ; channel 0
-LSP_DSP_PAULA_AUD0L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
-LSP_DSP_PAULA_AUD0LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
+;LSP_DSP_PAULA_AUD0L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
+;LSP_DSP_PAULA_AUD0LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
 LSP_DSP_PAULA_AUD0PER:				dc.l			$DEADDEAD				; period , a transformer en increment
-LSP_DSP_PAULA_AUD0VOL:				dc.l			0				; volume
-LSP_DSP_PAULA_AUD0DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
-LSP_DSP_PAULA_internal_location0:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
+;LSP_DSP_PAULA_AUD0VOL:				dc.l			0				; volume
+;LSP_DSP_PAULA_AUD0DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
+;LSP_DSP_PAULA_internal_location0:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
 LSP_DSP_PAULA_internal_increment0:	dc.l			$DEADDEAD				; internal register : increment linked to period 16:16
-LSP_DSP_PAULA_internal_length0:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
+;LSP_DSP_PAULA_internal_length0:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
 LSP_DSP_repeat_pointeur0:			dc.l			silence<<nb_bits_virgule_offset
 LSP_DSP_repeat_length0:				dc.l			(silence+4)<<nb_bits_virgule_offset
 ; channel 1
-LSP_DSP_PAULA_AUD1L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
-LSP_DSP_PAULA_AUD1LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
+;LSP_DSP_PAULA_AUD1L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
+;LSP_DSP_PAULA_AUD1LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
 LSP_DSP_PAULA_AUD1PER:				dc.l			$DEADDEAD				; period , a transformer en increment
-LSP_DSP_PAULA_AUD1VOL:				dc.l			0				; volume
-LSP_DSP_PAULA_AUD1DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
-LSP_DSP_PAULA_internal_location1:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
+;LSP_DSP_PAULA_AUD1VOL:				dc.l			0				; volume
+;LSP_DSP_PAULA_AUD1DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
+;LSP_DSP_PAULA_internal_location1:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
 LSP_DSP_PAULA_internal_increment1:	dc.l			$DEADDEAD				; internal register : increment linked to period 16:16
-LSP_DSP_PAULA_internal_length1:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
+;LSP_DSP_PAULA_internal_length1:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
 LSP_DSP_repeat_pointeur1:			dc.l			silence<<nb_bits_virgule_offset
 LSP_DSP_repeat_length1:				dc.l			(silence+4)<<nb_bits_virgule_offset
 ; channel 2
-LSP_DSP_PAULA_AUD2L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
-LSP_DSP_PAULA_AUD2LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
+;LSP_DSP_PAULA_AUD2L:				dc.l			silence<<nb_bits_virgule_offset			; Audio channel 0 location
+;LSP_DSP_PAULA_AUD2LEN:				dc.l			(silence+4)<<nb_bits_virgule_offset			; en bytes !
 LSP_DSP_PAULA_AUD2PER:				dc.l			$DEADDEAD				; period , a transformer en increment
-LSP_DSP_PAULA_AUD2VOL:				dc.l			0				; volume
-LSP_DSP_PAULA_AUD2DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
-LSP_DSP_PAULA_internal_location2:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
+;LSP_DSP_PAULA_AUD2VOL:				dc.l			0				; volume
+;LSP_DSP_PAULA_AUD2DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering
+;LSP_DSP_PAULA_internal_location2:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played
 LSP_DSP_PAULA_internal_increment2:	dc.l			$DEADDEAD				; internal register : increment linked to period 16:16
-LSP_DSP_PAULA_internal_length2:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
+;LSP_DSP_PAULA_internal_length2:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played
 LSP_DSP_repeat_pointeur2:			dc.l			silence<<nb_bits_virgule_offset
 LSP_DSP_repeat_length2:				dc.l			(silence+4)<<nb_bits_virgule_offset
 ; channel 3
-LSP_DSP_PAULA_AUD3L:				dc.l			$0				; silence<<nb_bits_virgule_offset			; Audio channel 0 location																0
-LSP_DSP_PAULA_AUD3LEN:				dc.l			$0					;(silence+4)<<nb_bits_virgule_offset			; en bytes !																		+4
+;LSP_DSP_PAULA_AUD3L:				dc.l			$0				; silence<<nb_bits_virgule_offset			; Audio channel 0 location																0
+;LSP_DSP_PAULA_AUD3LEN:				dc.l			$0					;(silence+4)<<nb_bits_virgule_offset			; en bytes !																		+4
 LSP_DSP_PAULA_AUD3PER:				dc.l			$DEADDEAD				; period , a transformer en increment																			+8
-LSP_DSP_PAULA_AUD3VOL:				dc.l			0				; volume																										+12
-LSP_DSP_PAULA_AUD3DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering															+16
-LSP_DSP_PAULA_internal_location3:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played						+20
+;LSP_DSP_PAULA_AUD3VOL:				dc.l			0				; volume																										+12
+;LSP_DSP_PAULA_AUD3DAT:				dc.l			0				; long word en cours d'utilisation / stocké / buffering															+16
+;LSP_DSP_PAULA_internal_location3:	dc.l			silence<<nb_bits_virgule_offset				; internal register : location of the sample currently played						+20
 LSP_DSP_PAULA_internal_increment3:	dc.l			$DEADDEAD				; internal register : increment linked to period 16:16															+24
-LSP_DSP_PAULA_internal_length3:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played							+28
+;LSP_DSP_PAULA_internal_length3:		dc.l			(silence+4)<<nb_bits_virgule_offset			; internal register : length of the sample currently played							+28
 LSP_DSP_repeat_pointeur3:			dc.l			silence<<nb_bits_virgule_offset																		;							+32
 LSP_DSP_repeat_length3:				dc.l			(silence+4)<<nb_bits_virgule_offset																	;							+36
 
-offset_LSP_DSP_PAULA_internal_location0		.equ			((LSP_DSP_PAULA_internal_location0-LSP_PAULA)/4)
+;offset_LSP_DSP_PAULA_internal_location0		.equ			((LSP_DSP_PAULA_internal_location0-LSP_PAULA)/4)
 
 LSPVars:
 m_byteStream:		dc.l	0	;  0 :  byte stream							0
