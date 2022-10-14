@@ -1500,9 +1500,9 @@ DSP_base_memoire:
 		nop
 	.endr
 ; I2S interrupt
-	movei	#DSP_LSP_routine_interruption_I2S,r26						; 6 octets
+	movei	#DSP_LSP_routine_interruption_I2S,r17						; 6 octets
 	movei	#D_FLAGS,r30											; 6 octets
-	jump	(r26)													; 2 octets
+	jump	(r17)													; 2 octets
 	load	(r30),r29	; read flags								; 2 octets = 16 octets
 ; Timer 1 interrupt
 	movei	#DSP_LSP_routine_interruption_Timer1,r12						; 6 octets
@@ -1556,6 +1556,10 @@ DSP_base_memoire:
 ;	- version simple, lit un octet à chaque fois
 ;	- puis version plus compleque : lit 1 long, et utilise ses octets
 DSP_LSP_routine_interruption_I2S:
+
+		store		R18,(R26)			; write left channel
+		store		R19,(R27)			; write right channel
+
 
 	.if		DSP_DEBUG
 ; change la couleur du fond
@@ -1934,8 +1938,10 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 		
 		;sub			R26,R18				; 16 bits signed
 		;sub			R26,R19
-		store		R19,(R27)			; write right channel
-		store		R18,(R26)			; write left channel
+
+; moved to top of I2S
+		;store		R19,(R27)			; write right channel
+		;store		R18,(R26)			; write left channel
 
 
 
@@ -1951,12 +1957,12 @@ DSP_LSP_routine_interruption_I2S_pas_nouveau_long_word0:
 
 ;------------------------------------	
 ; return from interrupt I2S
-	load	(r31),r26	; return address
+	load	(r31),r17	; return address
 	bset	#10,r29		; clear latch 1 = I2S
 	bclr	#3,r29		; clear IMASK
 	addq	#4,r31		; pop from stack
-	addqt	#2,r26		; next instruction
-	jump	t,(r26)		; return
+	addqt	#2,r17		; next instruction
+	jump	t,(r17)		; return
 	store	r29,(r30)	; restore flags
 
 
@@ -2941,6 +2947,17 @@ initPAL2:
 	;movei	#D_TIM1ENA|REGPAGE,r29					; Timer 1 only
 	;movei	#D_TIM2ENA|REGPAGE,r29					; Timer 2 only
 
+
+;----------------------------
+; registres pour replay reel samples dans I2S
+	movei		#L_I2S+4,R1
+	moveta		R1,R26
+	movei		#L_I2S,R1
+	moveta		R1,R27
+	moveq		#0,R1
+	moveta		R1,R18
+	moveta		R1,R19
+
 ;----------------------------
 ; variables pour movfa
 	movei		#$FFFFFFFC,R0									; OK
@@ -3004,6 +3021,7 @@ initPAL2:
 ;---------------
 ; volumes : R21/R22/R23/R24
 ; dispos : R25/R26 
+
 
 
 
