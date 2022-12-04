@@ -2030,39 +2030,36 @@ DSP_LSP_Timer1_swCode:
 ;--------------------------
 ; test volume canal 3
 	btst		#7,R2
-	jr			eq,DSP_LSP_Timer1_noVd
-	nop
 	loadb		(R0),R4
+	jr			eq,DSP_LSP_Timer1_noVd
+	btst		#6,R2
 	;movei		#LSP_DSP_PAULA_AUD3VOL,R5
-	addq		#1,R0
+	addqt		#1,R0
 	moveta		R4,R21									; alt R21 = volume channel 3
 	;store		R4,(R5)
+	loadb		(R0),R4
 DSP_LSP_Timer1_noVd:
 ; test volume canal 2
-	btst		#6,R2
 	jr			eq,DSP_LSP_Timer1_noVc
-	nop
-	loadb		(R0),R4
+	btst		#5,R2
 	;movei		#LSP_DSP_PAULA_AUD2VOL,R5
-	addq		#1,R0
+	addqt		#1,R0
 	moveta		R4,R22									; alt R22 = volume channel 2
 	;store		R4,(R5)
+	loadb		(R0),R4
 DSP_LSP_Timer1_noVc:
 ; test volume canal 1
-	btst		#5,R2
 	jr			eq,DSP_LSP_Timer1_noVb
-	nop
-	loadb		(R0),R4
+	btst		#4,R2
 	;movei		#LSP_DSP_PAULA_AUD1VOL,R5
-	addq		#1,R0
+	addqt		#1,R0
 	moveta		R4,R23									; alt R23 = volume channel 1
 	;store		R4,(R5)
+	loadb		(R0),R4
 DSP_LSP_Timer1_noVb:
 ; test volume canal 0
-	btst		#4,R2
 	jr			eq,DSP_LSP_Timer1_noVa
 	nop
-	loadb		(R0),R4
 	;movei		#LSP_DSP_PAULA_AUD0VOL,R5
 	addq		#1,R0
 	moveta		R4,R24									; alt R24 = volume channel 0
@@ -2079,40 +2076,37 @@ DSP_LSP_Timer1_noVa:
 ; gestion des notes
 ;--------------------------
 ; test period canal 3
-	btst		#3,R2
-	jr			eq,DSP_LSP_Timer1_noPd
-	nop
-	loadw		(R0),R4
-	movei		#LSP_DSP_PAULA_AUD3PER,R5
-	addq		#2,R0
-	store		R4,(R5)
+    btst	#3,R2
+    loadw	(R0),R4
+    jr		eq,DSP_LSP_Timer1_noPd
+    btst	#2,R2
+    movei	#LSP_DSP_PAULA_AUD3PER,R5
+    addqt	#2,R0
+    store	R4,(R5)
+    loadw	(R0),R4
 DSP_LSP_Timer1_noPd:
 ; test period canal 2
-	btst		#2,R2
-	jr			eq,DSP_LSP_Timer1_noPc
-	nop
-	loadw		(R0),R4
-	movei		#LSP_DSP_PAULA_AUD2PER,R5
-	addq		#2,R0
-	store		R4,(R5)
+    jr		eq,DSP_LSP_Timer1_noPc
+    btst	#1,R2
+    movei	#LSP_DSP_PAULA_AUD2PER,R5
+    addqt	#2,R0
+    store	R4,(R5)
+    loadw	(R0),R4
 DSP_LSP_Timer1_noPc:
 ; test period canal 1
-	btst		#1,R2
-	jr			eq,DSP_LSP_Timer1_noPb
-	nop
-	loadw		(R0),R4
-	movei		#LSP_DSP_PAULA_AUD1PER,R5
-	addq		#2,R0
-	store		R4,(R5)
+    jr		eq,DSP_LSP_Timer1_noPb
+    btst	#0,R2
+    movei	#LSP_DSP_PAULA_AUD1PER,R5
+    addqt	#2,R0
+    store	R4,(R5)
+    loadw	(R0),R4
 DSP_LSP_Timer1_noPb:
 ; test period canal 0
-	btst		#0,R2
-	jr			eq,DSP_LSP_Timer1_noPa
-	nop
-	loadw		(R0),R4
-	movei		#LSP_DSP_PAULA_AUD0PER,R5
-	addq		#2,R0
-	store		R4,(R5)
+    jr		eq,DSP_LSP_Timer1_noPa
+    nop
+    movei	#LSP_DSP_PAULA_AUD0PER,R5
+    addq	#2,R0
+    store	R4,(R5)
 DSP_LSP_Timer1_noPa:
 
 ; pas de test des 8 bits du haut en entier pour zapper la lecture des instruments
