@@ -1480,7 +1480,7 @@ LSP_Sample:
 		move.l		d1,4(a5)
 		swap		d5
 		move.w		d5,d1
-		move.w		d1,(a5)
+		move.l		d1,(a5)
 		movem.l	(a7)+,a0-a5
 		rts
 		
